@@ -1,7 +1,13 @@
 defmodule TodoList do
   defstruct auto_id: 1, entries: %{}
 
-  def new(), do: %TodoList{}
+  def new(entries \\ []) do
+    Enum.reduce(
+      entries,
+      %TodoList{},
+      fn entry, todo_list_acc -> add_entry(todo_list_acc, entry) end
+    )
+  end
 
   def add_entry(todo_list, entry) do
     # Set the new entry's id
@@ -64,5 +70,39 @@ defmodule MultiDict do
 
   def get(dict, key) do
     Map.get(dict, key, [])
+  end
+end
+
+defmodule TodoList.CsvImporter do
+  def import(csvfile) do
+    File.stream!(csvfile, [0o400])
+    |> Stream.map(fn row -> String.replace(row, "\n", "") end)
+    |> Stream.map(fn row -> String.split(row, ",") end)
+    |> Stream.map(fn row ->
+        [
+          String.split(Enum.at(row, 0), "/"),
+          Enum.at(row, 1)
+        ]
+        end
+      )
+    |> Stream.map(fn row ->
+        [
+          List.to_tuple(Enum.map(Enum.at(row, 0), fn date -> String.to_integer(date) end)),
+          Enum.at(row, 1)
+        ]
+        end
+      )
+    |> Stream.map(fn row ->
+        [
+          Date.from_erl!(Enum.at(row, 0)),
+          Enum.at(row, 1)
+        ]
+        end
+      )
+    |> Stream.map(fn row ->
+        %{date: Enum.at(row, 0), title: Enum.at(row, 1)}
+        end
+      )
+    |> TodoList.new()
   end
 end
